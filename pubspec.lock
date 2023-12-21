@@ -1152,11 +1152,12 @@ packages:
   matrix:
     dependency: "direct main"
     description:
-      name: matrix
-      sha256: "1cea8c269054329a8882f47fa36c6573d6b62465b8e7b06f1211b4113fdcd201"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.25.6"
+      path: "."
+      ref: "krille/background-client"
+      resolved-ref: e93cfa7666bd44ff1e2a50bfaf41cc4d2a568eaf
+      url: "https://github.com/famedly/matrix-dart-sdk.git"
+    source: git
+    version: "0.25.5"
   matrix_api_lite:
     dependency: transitive
     description:
