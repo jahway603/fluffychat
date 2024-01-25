@@ -1,9 +1,16 @@
+import 'dart:ui' as ui;
+
+import 'package:fluffychat/utils/client_wallpaper.dart';
+import 'package:fluffychat/widgets/avatar.dart';
+import 'package:fluffychat/widgets/matrix.dart';
+import 'package:fluffychat/widgets/mxc_image.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_gen/gen_l10n/l10n.dart';
 
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/widgets/layouts/max_width_body.dart';
+import 'package:matrix/matrix.dart';
 import '../../config/app_config.dart';
 import 'settings_style.dart';
 
@@ -15,6 +22,7 @@ class SettingsStyleView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const colorPickerSize = 32.0;
+    final client = Matrix.of(context).client;
     return Scaffold(
       appBar: AppBar(
         leading: const Center(child: BackButton()),
@@ -166,27 +174,99 @@ class SettingsStyleView extends StatelessWidget {
                 ),
               ),
             ),
-            Container(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Material(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppConfig.borderRadius),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      fontSize:
-                          AppConfig.messageFontSize * AppConfig.fontSizeFactor,
-                    ),
-                  ),
-                ),
+            StreamBuilder(
+              stream: client.onAccountData.stream.where(
+                (data) => data.type == ClientChatWallpaper.accountDataKey,
               ),
+              builder: (context, snapshot) {
+                final chatWallpaper = client.chatWallpaper;
+                final blurValue = chatWallpaper.blur == true ? 8.0 : 0.0;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: FluffyThemes.animationDuration,
+                      curve: FluffyThemes.animationCurve,
+                      alignment: Alignment.centerLeft,
+                      decoration: const BoxDecoration(),
+                      clipBehavior: Clip.hardEdge,
+                      child: Stack(
+                        children: [
+                          if (chatWallpaper.url != null)
+                            MxcImage(
+                              uri: chatWallpaper.url,
+                              fit: BoxFit.cover,
+                              isThumbnail: true,
+                              width: FluffyThemes.columnWidth * 2,
+                              height: 156,
+                            ),
+                          Padding(
+                            padding: EdgeInsets.only(
+                              left: 12 + 12 + Avatar.defaultSize,
+                              right: 12,
+                              top: chatWallpaper.url == null ? 0 : 12,
+                              bottom: 12,
+                            ),
+                            child: BackdropFilter(
+                              filter: ui.ImageFilter.blur(
+                                sigmaX: blurValue,
+                                sigmaY: blurValue,
+                              ),
+                              child: Material(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                borderRadius: BorderRadius.circular(
+                                    AppConfig.borderRadius),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  child: Text(
+                                    'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor',
+                                    style: TextStyle(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimaryContainer,
+                                      fontSize: AppConfig.messageFontSize *
+                                          AppConfig.fontSizeFactor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ListTile(
+                      title: Text(L10n.of(context)!.wallpaper),
+                      leading: const Icon(Icons.photo),
+                      trailing: chatWallpaper.url == null
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.delete_outlined),
+                              color: Theme.of(context).colorScheme.error,
+                              onPressed: controller.deleteChatWallpaper,
+                            ),
+                      onTap: controller.setWallpaper,
+                    ),
+                    AnimatedSize(
+                      duration: FluffyThemes.animationDuration,
+                      curve: FluffyThemes.animationCurve,
+                      child: chatWallpaper.url != null
+                          ? SwitchListTile.adaptive(
+                              title: Text('Blur'),
+                              secondary: const Icon(Icons.blur_linear_outlined),
+                              value: chatWallpaper.blur ?? false,
+                              onChanged: controller.toggleChatWallpaperBlur,
+                            )
+                          : null,
+                    ),
+                  ],
+                );
+              },
             ),
             ListTile(
               title: Text(L10n.of(context)!.fontSize),

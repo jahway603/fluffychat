@@ -1,4 +1,7 @@
+import 'package:fluffychat/utils/client_wallpaper.dart';
+import 'package:fluffychat/widgets/mxc_image.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 
 import 'package:badges/badges.dart';
 import 'package:desktop_drop/desktop_drop.dart';
@@ -136,6 +139,9 @@ class ChatView extends StatelessWidget {
     final bottomSheetPadding = FluffyThemes.isColumnMode(context) ? 16.0 : 8.0;
     final scrollUpBannerEventId = controller.scrollUpBannerEventId;
 
+    final chatWallpaper = Matrix.of(context).client.chatWallpaper;
+    final blurValue = chatWallpaper.blur == true ? 8.0 : 0.0;
+
     return PopScope(
       canPop: controller.selectedEvents.isEmpty && !controller.showEmojiPicker,
       onPopInvoked: (pop) async {
@@ -198,152 +204,175 @@ class ChatView extends StatelessWidget {
                     onDragExited: controller.onDragExited,
                     child: Stack(
                       children: <Widget>[
-                        SafeArea(
-                          child: Column(
-                            children: <Widget>[
-                              TombstoneDisplay(controller),
-                              if (scrollUpBannerEventId != null)
-                                Material(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceVariant,
-                                  shape: Border(
-                                    bottom: BorderSide(
-                                      width: 1,
-                                      color: Theme.of(context).dividerColor,
-                                    ),
-                                  ),
-                                  child: ListTile(
-                                    leading: IconButton(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                      icon: const Icon(Icons.close),
-                                      tooltip: L10n.of(context)!.close,
-                                      onPressed: () {
-                                        controller
-                                            .discardScrollUpBannerEventId();
-                                        controller.setReadMarker();
-                                      },
-                                    ),
-                                    title: Text(
-                                      L10n.of(context)!.jumpToLastReadMessage,
-                                    ),
-                                    contentPadding:
-                                        const EdgeInsets.only(left: 8),
-                                    trailing: TextButton(
-                                      onPressed: () {
-                                        controller.scrollToEventId(
-                                          scrollUpBannerEventId,
-                                        );
-                                        controller
-                                            .discardScrollUpBannerEventId();
-                                      },
-                                      child: Text(L10n.of(context)!.jump),
-                                    ),
-                                  ),
-                                ),
-                              PinnedEvents(controller),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: controller.clearSingleSelectedEvent,
-                                  child: Builder(
-                                    builder: (context) {
-                                      if (controller.timeline == null) {
-                                        return const Center(
-                                          child: CircularProgressIndicator
-                                              .adaptive(
-                                            strokeWidth: 2,
-                                          ),
-                                        );
-                                      }
-                                      return ChatEventList(
-                                        controller: controller,
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              if (controller.room.canSendDefaultMessages &&
-                                  controller.room.membership == Membership.join)
-                                Container(
-                                  margin: EdgeInsets.only(
-                                    bottom: bottomSheetPadding,
-                                    left: bottomSheetPadding,
-                                    right: bottomSheetPadding,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    maxWidth: FluffyThemes.columnWidth * 2.5,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Material(
-                                    borderRadius: const BorderRadius.only(
-                                      bottomLeft: Radius.circular(
-                                        AppConfig.borderRadius,
-                                      ),
-                                      bottomRight: Radius.circular(
-                                        AppConfig.borderRadius,
+                        if (chatWallpaper.url != null)
+                          Opacity(
+                            opacity: 0.8,
+                            child: MxcImage(
+                              uri: chatWallpaper.url,
+                              fit: BoxFit.cover,
+                              isThumbnail: true,
+                              width: FluffyThemes.columnWidth * 2,
+                              height: MediaQuery.of(context).size.height,
+                            ),
+                          ),
+                        BackdropFilter(
+                          filter: ui.ImageFilter.blur(
+                            sigmaX: blurValue,
+                            sigmaY: blurValue,
+                          ),
+                          child: SafeArea(
+                            child: Column(
+                              children: <Widget>[
+                                TombstoneDisplay(controller),
+                                if (scrollUpBannerEventId != null)
+                                  Material(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceVariant,
+                                    shape: Border(
+                                      bottom: BorderSide(
+                                        width: 1,
+                                        color: Theme.of(context).dividerColor,
                                       ),
                                     ),
-                                    elevation: 4,
-                                    shadowColor: Colors.black.withAlpha(64),
-                                    clipBehavior: Clip.hardEdge,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.light
-                                        ? Colors.white
-                                        : Colors.black,
-                                    child: controller.room.isAbandonedDMRoom ==
-                                            true
-                                        ? Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceEvenly,
-                                            children: [
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  padding:
-                                                      const EdgeInsets.all(16),
-                                                  foregroundColor:
-                                                      Theme.of(context)
-                                                          .colorScheme
-                                                          .error,
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.archive_outlined,
-                                                ),
-                                                onPressed: controller.leaveChat,
-                                                label: Text(
-                                                  L10n.of(context)!.leave,
-                                                ),
-                                              ),
-                                              TextButton.icon(
-                                                style: TextButton.styleFrom(
-                                                  padding:
-                                                      const EdgeInsets.all(16),
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.forum_outlined,
-                                                ),
-                                                onPressed:
-                                                    controller.recreateChat,
-                                                label: Text(
-                                                  L10n.of(context)!.reopenChat,
-                                                ),
-                                              ),
-                                            ],
-                                          )
-                                        : Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const ConnectionStatusHeader(),
-                                              ReactionsPicker(controller),
-                                              ReplyDisplay(controller),
-                                              ChatInputRow(controller),
-                                              ChatEmojiPicker(controller),
-                                            ],
-                                          ),
+                                    child: ListTile(
+                                      leading: IconButton(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                        icon: const Icon(Icons.close),
+                                        tooltip: L10n.of(context)!.close,
+                                        onPressed: () {
+                                          controller
+                                              .discardScrollUpBannerEventId();
+                                          controller.setReadMarker();
+                                        },
+                                      ),
+                                      title: Text(
+                                        L10n.of(context)!.jumpToLastReadMessage,
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.only(left: 8),
+                                      trailing: TextButton(
+                                        onPressed: () {
+                                          controller.scrollToEventId(
+                                            scrollUpBannerEventId,
+                                          );
+                                          controller
+                                              .discardScrollUpBannerEventId();
+                                        },
+                                        child: Text(L10n.of(context)!.jump),
+                                      ),
+                                    ),
+                                  ),
+                                PinnedEvents(controller),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: controller.clearSingleSelectedEvent,
+                                    child: Builder(
+                                      builder: (context) {
+                                        if (controller.timeline == null) {
+                                          return const Center(
+                                            child: CircularProgressIndicator
+                                                .adaptive(
+                                              strokeWidth: 2,
+                                            ),
+                                          );
+                                        }
+                                        return ChatEventList(
+                                          controller: controller,
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                            ],
+                                if (controller.room.canSendDefaultMessages &&
+                                    controller.room.membership ==
+                                        Membership.join)
+                                  Container(
+                                    margin: EdgeInsets.only(
+                                      bottom: bottomSheetPadding,
+                                      left: bottomSheetPadding,
+                                      right: bottomSheetPadding,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      maxWidth: FluffyThemes.columnWidth * 2.5,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Material(
+                                      borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(
+                                          AppConfig.borderRadius,
+                                        ),
+                                        bottomRight: Radius.circular(
+                                          AppConfig.borderRadius,
+                                        ),
+                                      ),
+                                      elevation: 4,
+                                      shadowColor: Colors.black.withAlpha(64),
+                                      clipBehavior: Clip.hardEdge,
+                                      color: Theme.of(context).brightness ==
+                                              Brightness.light
+                                          ? Colors.white
+                                          : Colors.black,
+                                      child: controller
+                                                  .room.isAbandonedDMRoom ==
+                                              true
+                                          ? Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: [
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            16),
+                                                    foregroundColor:
+                                                        Theme.of(context)
+                                                            .colorScheme
+                                                            .error,
+                                                  ),
+                                                  icon: const Icon(
+                                                    Icons.archive_outlined,
+                                                  ),
+                                                  onPressed:
+                                                      controller.leaveChat,
+                                                  label: Text(
+                                                    L10n.of(context)!.leave,
+                                                  ),
+                                                ),
+                                                TextButton.icon(
+                                                  style: TextButton.styleFrom(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            16),
+                                                  ),
+                                                  icon: const Icon(
+                                                    Icons.forum_outlined,
+                                                  ),
+                                                  onPressed:
+                                                      controller.recreateChat,
+                                                  label: Text(
+                                                    L10n.of(context)!
+                                                        .reopenChat,
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          : Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const ConnectionStatusHeader(),
+                                                ReactionsPicker(controller),
+                                                ReplyDisplay(controller),
+                                                ChatInputRow(controller),
+                                                ChatEmojiPicker(controller),
+                                              ],
+                                            ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                         if (controller.dragging)
